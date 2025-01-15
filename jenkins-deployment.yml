@@ -1,0 +1,61 @@
+---
+- name: Deploy Jenkins on EC2 instance
+  hosts: ec2_instances
+  become: yes
+  vars:
+    java_package: openjdk-11-jdk
+    jenkins_version: 2.319.1
+
+  tasks:
+    - name: Install Java
+      apt:
+        name: "{{ java_package }}"
+        state: present
+        update_cache: yes
+
+    - name: Remove Jenkins repository configuration file (force)
+      file:
+        path: /etc/apt/sources.list.d/pkg_jenkins_io_debian.list
+        state: absent
+      ignore_errors: yes
+
+    - name: Clean apt cache to ensure no residual errors
+      apt:
+        autoclean: yes
+
+    - name: Ensure no other Jenkins repo files exist
+      command: find /etc/apt/sources.list.d/ -type f -name '*jenkins*' -exec rm -f {} \;
+      ignore_errors: yes
+
+    - name: Add Jenkins Repository Key
+      get_url:
+        url: https://pkg.jenkins.io/debian/jenkins.io.key
+        dest: /usr/share/keyrings/jenkins-archive-keyring.gpg
+        mode: '0644'
+
+    - name: Add Jenkins Repository
+      apt_repository:
+        repo: 'deb [signed-by=/usr/share/keyrings/jenkins-archive-keyring.gpg] https://pkg.jenkins.io/debian/ stable main'
+        state: present
+
+    - name: Update apt package list
+      apt:
+        update_cache: yes
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+
+    - name: Start Jenkins service
+      service:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Open Jenkins port on EC2 instance
+      ufw:
+        rule: allow
+        name: 'Open port 8080'
+        port: 8080
+        proto: tcp

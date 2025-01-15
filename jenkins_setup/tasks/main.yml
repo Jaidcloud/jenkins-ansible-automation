@@ -1,0 +1,34 @@
+---
+- name: Install Java
+  apt:
+    name: "{{ java_package }}"
+    state: present
+    update_cache: yes
+
+- name: Add Jenkins Repository Key
+  apt_key:
+    url: https://pkg.jenkins.io/jenkins.io.key
+    state: present
+
+- name: Add Jenkins Repository
+  apt_repository:
+    repo: deb http://pkg.jenkins.io/debian/ jenkins.io/ main
+    state: present
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+- name: Open Jenkins port on EC2 instance
+  ufw:
+    rule: allow
+    name: 'Open port 8080'
+    port: 8080
+    proto: tcp
